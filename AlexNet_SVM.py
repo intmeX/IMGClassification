@@ -30,12 +30,20 @@ class AlexNet(nn.Module):
             nn.Dropout(p=0.5),
             nn.Linear(2048, 2048),
             nn.ReLU(inplace=True),
-            nn.Linear(2048, num_classes),
         )
+        self.linear = nn.Linear(2048, 10)
         if init_weights:
             self._initialize_weights()
 
     def forward(self, x):
+        x = self.features(x)
+        # 展为一维
+        x = torch.flatten(x, start_dim=1)
+        x = self.classifier(x)
+        x = self.linear(x)
+        return x
+
+    def transform(self, x):
         x = self.features(x)
         # 展为一维
         x = torch.flatten(x, start_dim=1)
@@ -51,4 +59,23 @@ class AlexNet(nn.Module):
             elif isinstance(m, nn.Linear):
                 nn.init.normal_(m.weight, 0, 0.01)  #正态分布赋值
                 nn.init.constant_(m.bias, 0)
+
+
+class AlexLinear(nn.Module):
+    def __init__(self, init_weights=False):
+        super(AlexLinear, self).__init__()
+        self.classifier = nn.Sequential(
+            nn.Linear(2048, 10),
+        )
+        if init_weights:
+            self._initialize_weights()
+
+    def forward(self, x):
+        x = self.classifier(x)
+        return x
+
+    def _initialize_weights(self):
+        for m in self.modules():
+            nn.init.normal_(m.weight, 0, 0.01)
+            nn.init.constant_(m.bias, 0)
 

@@ -133,4 +133,4 @@ dmypy.json
 
 # IMGC ignore
 Dataset/
-model/
+model*/

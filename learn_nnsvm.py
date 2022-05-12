@@ -1,27 +1,29 @@
-import pandas as pd
+import numpy as np
 import time
 import torch
 from torch.nn import CrossEntropyLoss
 from torch.optim import AdamW
 import os
 import data
-import AlexNet
+import AlexNet_SVM
+from sklearn import svm
 
 
 hidden_dropout_prob = 0.3
 weight_decay = 0.01
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-epoch = 10
+epoch = 8
 batch_size = 10
 
 
 # 模型加载
-net_model = AlexNet.AlexNet(num_classes=10, init_weights=True)
+net_model = AlexNet_SVM.AlexNet(num_classes=10, init_weights=True)
+# clf = AlexNet_SVM.AlexLinear(init_weights=True)
 net_model.to(device)
+# clf.to(device)
 
 
 def training(model: torch.nn.Module, dataloader, optimizer, criterion, device):
-    global tokenizer
     model.train()
     epoch_loss = 0
     epoch_acc = 0
@@ -64,8 +66,6 @@ def evaluting(model: torch.nn.Module, dataloader, criterion, device):
             img = img.to(device)
             label = label.to(device)
 
-            optimizer.zero_grad()
-
             output = model(img)
             prob = output
             pred = prob.argmax(dim=1)
@@ -95,11 +95,12 @@ if __name__ == '__main__':
         {'params': [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
     ]
     """
+    '''
     optimizer = AdamW(net_model.parameters(), lr=5e-5)
     loss_func = CrossEntropyLoss()
 
     times = []
-    model_path = './model/'
+    model_path = './model_nn_svm/'
     if not os.path.exists(model_path):
         os.mkdir(model_path)
 
@@ -124,4 +125,22 @@ if __name__ == '__main__':
     if last_epoch == epoch:
         torch.save(net_model.state_dict(), model_path + 'pytorch_model.bin')
     print("\ntimecost:", times, "\n")
+    '''
+    net_model.to(torch.device("cpu"))
+    net_model.eval()
+    with torch.no_grad():
+        net_model.load_state_dict(torch.load('./model_nn_svm/pytorch_model.bin'))
+        train_f = np.array([net_model.transform(torch.Tensor([x[0].numpy()])).numpy().reshape(-1)
+                            for x in train_loader.dataset])
+        train_l = np.array([x[1] for x in train_loader.dataset])
+        val_f = np.array([net_model.transform(torch.Tensor([x[0].numpy()])).numpy().reshape(-1)
+                          for x in validate_loader.dataset])
+        val_l = np.array([x[1] for x in validate_loader.dataset])
+
+    classifier = svm.SVC(C=10, gamma=0.001, max_iter=1500)
+    classifier.fit(train_f, train_l)
+
+    val_result = classifier.predict(val_f)
+    precision = sum(val_result == val_l) / val_f.shape[0]
+    print('Validate precision: ', precision)
 
