@@ -8,7 +8,6 @@ import data
 import AlexNet
 
 
-hidden_dropout_prob = 0.3
 weight_decay = 0.01
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 epoch = 10

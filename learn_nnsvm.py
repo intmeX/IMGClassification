@@ -129,6 +129,7 @@ if __name__ == '__main__':
     net_model.to(torch.device("cpu"))
     net_model.eval()
     with torch.no_grad():
+        # 加载AlexNet用作特征提取器
         net_model.load_state_dict(torch.load('./model_nn_svm/pytorch_model.bin'))
         train_f = np.array([net_model.transform(torch.Tensor([x[0].numpy()])).numpy().reshape(-1)
                             for x in train_loader.dataset])
@@ -136,7 +137,7 @@ if __name__ == '__main__':
         val_f = np.array([net_model.transform(torch.Tensor([x[0].numpy()])).numpy().reshape(-1)
                           for x in validate_loader.dataset])
         val_l = np.array([x[1] for x in validate_loader.dataset])
-
+    # SVM分类器在处理好的特征上的拟合
     classifier = svm.SVC(C=10, gamma=0.001, max_iter=1500)
     classifier.fit(train_f, train_l)
 
